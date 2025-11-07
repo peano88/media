@@ -1,0 +1,462 @@
+openapi: 3.0.0
+info:
+  title: Management Media Service API
+  description: API for managing media files and tags
+  version: 1.0.0
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+paths:
+  /tags:
+    get:
+      summary: Get all tags
+      description: Retrieve a list of all available tags
+      operationId: getTags
+      tags:
+        - Tags
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of tags to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of tags to skip for pagination
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Successfully retrieved tags
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tag'
+                  total:
+                    type: integer
+                    description: Total number of tags available
+                  limit:
+                    type: integer
+                    description: Number of tags returned
+                  offset:
+                    type: integer
+                    description: Number of tags skipped
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Create a new tag
+      description: Create a new tag in the system
+      operationId: createTag
+      tags:
+        - Tags
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTagRequest'
+      responses:
+        '201':
+          description: Tag created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Tag'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict - tag already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /media:
+    post:
+      summary: Upload a new media file
+      description: Upload and create a new media file in the system
+      operationId: createMedia
+      tags:
+        - Media
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMediaRequest'
+      responses:
+        '200':
+          description: Media file exists already but was not finalized. 
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Media'
+        '201':
+          description: Media file created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Media'
+        '400':
+          description: Bad request - invalid input or file format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict - another media resource exists with the same properties  
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: Payload too large - file size exceeds limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Unprocessable entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /media/{id}:
+    get:
+      summary: Get a media file
+      description: Retrieve a media file
+      operationId: getMedia
+      tags:
+        - Media
+      parameters:
+        - name: id
+          in: path
+          description: the id of the media to retrieve
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successfully retrieved media file
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Media'
+                  total:
+                    type: integer
+                    description: Total number of media files available
+                  limit:
+                    type: integer
+                    description: Number of media files returned
+                  offset:
+                    type: integer
+                    description: Number of media files skipped
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /media/{id}/finalize:
+    post:
+      summary: finalize the upload of a file 
+      description: finalize the upload once the file is loaded into the file storage system
+      operationId: finalizeMedia
+      tags:
+        - Media
+      parameters:
+        - name: id
+          in: path
+          description: the id of the media to retrieve
+          required: true
+          schema:
+            type: string 
+            format: uuid
+      responses:
+        '200':
+          description: Successfully finalized media file
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Media'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404': 
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Tag:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the tag
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        name:
+          type: string
+          description: Name of the tag
+          maxLength: 100
+          example: "nature"
+        description:
+          type: string
+          description: Description of the tag
+          maxLength: 255
+          example: "Images related to nature and landscapes"
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2023-01-01T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2023-01-01T12:00:00Z"
+      required:
+        - id
+        - name
+        - createdAt
+        - updatedAt
+
+    CreateTagRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the tag
+          minLength: 1
+          maxLength: 100
+          example: "nature"
+        description:
+          type: string
+          description: Description of the tag
+          maxLength: 255
+          example: "Images related to nature and landscapes"
+      required:
+        - name
+
+    Media:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the media file
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        title:
+          type: string
+          description: Title of the media file
+          maxLength: 255
+          example: "Beautiful Sunset"
+        description:
+          type: string
+          description: Description of the media file
+          maxLength: 1000
+          example: "A stunning sunset over the mountains"
+        filename:
+          type: string
+          description: Original filename
+          example: "sunset.jpg"
+        status:
+          type: string
+          enum:
+            - reserved
+            - finalized 
+            - failed
+        url:
+          type: string
+          format: uri
+          description: URL to access the media file
+          example: "https://cdn.example.com/media/sunset.jpg"
+        type:
+          type: string
+          enum: [image, video, audio, document]
+          description: Type of media file
+          example: "image"
+        mimeType:
+          type: string
+          description: MIME type of the file
+          example: "image/jpeg"
+        size:
+          type: integer
+          description: File size in bytes
+          example: 1024000
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+          description: Tags associated with the media file
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2023-01-01T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2023-01-01T12:00:00Z"
+      required:
+        - id
+        - title
+        - filename
+        - url
+        - type
+        - mimeType
+        - size
+        - createdAt
+        - updatedAt
+
+    CreateMediaRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Title of the media file
+          minLength: 1
+          maxLength: 255
+          example: "Beautiful Sunset"
+        description:
+          type: string
+          description: Description of the media file
+          maxLength: 1000
+          example: "A stunning sunset over the mountains"
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tag names to associate with the media file
+          example: ["nature", "landscape", "sunset"]
+        sha256: 
+          type: string
+          format: base64
+          description: base64 encoded sha256 of the file to upload
+        size:
+         type: integer
+         description: file size in bytes. it will be checked in the finalization step
+      required:
+        - title
+        - sha256
+        - size
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: "INVALID_INPUT"
+            message:
+              type: string
+              description: Human-readable error message
+              example: "The provided input is invalid"
+            details:
+              type: string
+              description: Additional error details
+              example: "Field 'name' is required but was not provided"
+            timestamp:
+              type: string
+              format: date-time
+              description: Error timestamp
+              example: "2023-01-01T12:00:00Z"
+            request_id:
+              type: string
+              description: id of the request
+              example: "tags-post-1234"
+          required:
+            - code
+            - message
+      required:
+        - error
+
+tags:
+  - name: Tags
+    description: Operations related to tag management
+  - name: Media
+    description: Operations related to media file management

@@ -1,0 +1,7 @@
+bin/
+.claude/settings.local.json
+food_for_thoughts.md
+main.go.bkp
+uploader
+service 
+cmd/media_managment_service/main
