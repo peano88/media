@@ -14,6 +14,9 @@ The media managment needs to allow the correct processing of two entities:
 - no housekeeping on the data; this is reserved for the future;
 - no backup nor replication as well, as this can be done externally on the single resource, if needed.
 - currently we do not care about the localisation of the client: everything is stored toghether;
+- we will stick to a minimum viable regarding metrics, namely: how many request on which path, the result status code and an average time; 
+- log will be prompted on stdout;
+- no release managment. this will be done elsewhere;
 
 ## Macro system
 
@@ -104,9 +107,14 @@ The service itself is an API service exposing endpoints to handle tags and media
 It is architectured as a lightweight clean archictecture service on 3 layers: 
 - the domain defines core data transitioning between the other 2 layers;
 - the usecases defines business logics to apply to the data; There is a specific usecase for each route defined by the service;
-- adapters defines how the domain data should interact with external systems. We currently have incoming/outgoing http requests, db storage and file storage. 
+- adapters defines how the domain data should interact with external systems. We currently have incoming/outgoing http requests, db storage and file storage and metrics (using vanilla expvar).
 
 In order to keep it simpler, only the http adapter defines specific data structures to control what the client sends/receives. db storage and file storage uses the domain models directly. This is possible because the core data and what it is used by the adapters do not diverge significantly.
+
+### Configuration
+TODO
+
+### Errors
 
 ## Local
 
