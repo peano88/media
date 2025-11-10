@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/peano88/medias/internal/domain"
@@ -58,4 +59,34 @@ func (tr *TagRepository) CreateTag(ctx context.Context, tag domain.Tag) (domain.
 	}
 
 	return created, nil
+}
+
+// FindAllTags retrieves all tags from the database
+func (tr *TagRepository) FindAllTags(ctx context.Context) ([]domain.Tag, error) {
+	query := `
+		SELECT id, name, description, created_at, updated_at
+		FROM tags
+		ORDER BY created_at DESC
+	`
+
+	rows, err := tr.pool.Query(ctx, query)
+	if err != nil {
+		return nil, domain.NewError(domain.InternalCode,
+			domain.WithMessage("failed to retrieve tags"),
+			domain.WithDetails(err.Error()),
+			domain.WithTS(time.Now()),
+		)
+	}
+	defer rows.Close()
+
+	tags, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Tag])
+	if err != nil {
+		return nil, domain.NewError(domain.InternalCode,
+			domain.WithMessage("failed to collect tags"),
+			domain.WithDetails(err.Error()),
+			domain.WithTS(time.Now()),
+		)
+	}
+
+	return tags, nil
 }

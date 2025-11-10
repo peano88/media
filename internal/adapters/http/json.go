@@ -25,8 +25,9 @@ func JSONOut[T any](rw http.ResponseWriter, statusCode int, resp T) {
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(statusCode)
 	if err := json.NewEncoder(rw).Encode(resp); err != nil {
-		// If we can't encode the response, log it but can't send error to client
+		// If we can't encode the response, we can't send error to client
 		// as headers are already written
+		//TODO
 		return
 	}
 }

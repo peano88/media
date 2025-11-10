@@ -12,6 +12,7 @@ import (
 	"github.com/peano88/medias/internal/adapters/metrics/expvar"
 	"github.com/peano88/medias/internal/adapters/storage/postgres"
 	"github.com/peano88/medias/internal/app/createtag"
+	"github.com/peano88/medias/internal/app/gettags"
 )
 
 func main() {
@@ -46,9 +47,11 @@ func main() {
 
 	// Create use cases
 	createTagUseCase := createtag.New(tagRepo)
+	getTagsUseCase := gettags.New(tagRepo)
 
 	deps := http.Dependencies{
 		TagCreator:      createTagUseCase,
+		TagRetriever:    getTagsUseCase,
 		Logger:          logger,
 		MetricForwarder: expvar.NewExpvarMetrics(),
 	}

@@ -13,6 +13,7 @@ const BasePath = "/api/v1"
 
 type Dependencies struct {
 	TagCreator      TagCreator
+	TagRetriever    TagRetriever
 	Logger          *slog.Logger
 	MetricForwarder MetricsForwarder
 }
@@ -34,6 +35,7 @@ func NewRouter(deps Dependencies) chi.Router {
 	)
 
 	apiRouter.Post("/tags", HandlePostTags(deps.TagCreator))
+	apiRouter.Get("/tags", HandleGetTags(deps.TagRetriever))
 
 	r.Mount(BasePath, apiRouter)
 	return r

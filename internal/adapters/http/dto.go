@@ -11,6 +11,10 @@ type createTagResponse struct {
 	Data tagData `json:"data"`
 }
 
+type getTagsResponse struct {
+	Data []tagData `json:"data"`
+}
+
 type tagData struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
