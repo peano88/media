@@ -1,6 +1,7 @@
 package http
 
 import (
+	"expvar"
 	"log/slog"
 	"net/http"
 
@@ -20,6 +21,7 @@ func NewRouter(deps Dependencies) chi.Router {
 	r := chi.NewRouter()
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {})
+	r.Get("/debug/vars", expvar.Handler().ServeHTTP)
 
 	apiRouter := chi.NewRouter()
 

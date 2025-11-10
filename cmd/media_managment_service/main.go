@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/peano88/medias/internal/adapters/http"
+	"github.com/peano88/medias/internal/adapters/metrics/expvar"
 	"github.com/peano88/medias/internal/adapters/storage/postgres"
 	"github.com/peano88/medias/internal/app/createtag"
 )
@@ -49,7 +50,7 @@ func main() {
 	deps := http.Dependencies{
 		TagCreator:      createTagUseCase,
 		Logger:          logger,
-		MetricForwarder: http.DummyMetricsForwarder{},
+		MetricForwarder: expvar.NewExpvarMetrics(),
 	}
 
 	// Create server

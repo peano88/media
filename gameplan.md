@@ -19,6 +19,10 @@
 
 ## tech choices
 
+### Web framework: chi
+Chi is a lightweight package that provides a simple way to define HTTP routes and middlewares in Go. It offers a 
+complete compatibility with the standard `net/http` package, and plenty of middlewares for common tasks such as logging, tracing, and CORS handling.
+
 ### Database driver: pgx vs lib/pq
 
 **Decision: Use `github.com/jackc/pgx/v5` with `pgxpool`**
@@ -27,6 +31,11 @@
 - **Performance**: 2-3x faster than lib/pq for most operations due to native PostgreSQL protocol implementation
 - **Prepared statements**: Automatic prepared statement caching by default, reducing database overhead for repeated queries
 - **Connection pooling**: Native `pgxpool` provides better connection management with configurable min/max connections, lifecycle, and health checks
+
+### metrics: expvar 
+
+expvar provides a simple way to expose application metrics via HTTP. It is part of the Go standard library, making it easy to integrate without adding external dependencies.
+Moreover it can easily integrated with other metrics systems if needed in the future.
 
 ## building 
 
