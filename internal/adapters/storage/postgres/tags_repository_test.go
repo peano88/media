@@ -66,13 +66,12 @@ func TestTagRepository_Create(t *testing.T) {
 	for _, td := range testData {
 		t.Run(td.name, func(t *testing.T) {
 			created, err := repo.CreateTag(td.ctx, td.tag)
-			switch {
-			case td.expectedErrorCode == "":
+			if td.expectedErrorCode == "" {
 				assert.NoError(t, err)
 				assert.Equal(t, td.tag.Name, created.Name)
 				assert.NotEmpty(t, created.ID)
 				assert.NotEmpty(t, created.CreatedAt)
-			default:
+			} else {
 				// all errors should be of type domain.Error
 				var domainErr *domain.Error
 				if assert.ErrorAs(t, err, &domainErr) {

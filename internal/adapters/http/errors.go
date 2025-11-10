@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -26,7 +27,10 @@ func errorCodeToHTTPCode(code string) int {
 
 func handleExecutorError(ctx context.Context, rw http.ResponseWriter, err error) {
 	// log the error in any case
-	httplog.SetError(ctx, err)
+	if err := httplog.SetError(ctx, err); err != nil {
+		// this should never happened, in case use the standard logging
+		log.Printf("failed to set error in httplog: %s", err)
+	}
 	var domainErr *domain.Error
 	if errors.As(err, &domainErr) {
 		respondWithError(rw, errorCodeToHTTPCode(domainErr.Code), domainErr.Code,
