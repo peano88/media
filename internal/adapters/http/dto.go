@@ -12,7 +12,14 @@ type createTagResponse struct {
 }
 
 type getTagsResponse struct {
-	Data []tagData `json:"data"`
+	Data       []tagData           `json:"data"`
+	Pagination paginationMetadata `json:"pagination"`
+}
+
+type paginationMetadata struct {
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+	Total  int `json:"total"`
 }
 
 type tagData struct {

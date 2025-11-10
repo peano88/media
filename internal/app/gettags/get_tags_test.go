@@ -20,11 +20,16 @@ func TestUseCase_Execute(t *testing.T) {
 
 	tests := []struct {
 		name      string
+		params    domain.PaginationParams
 		setupMock func(*mocks.MockTagRepository)
-		validate  func(*testing.T, []domain.Tag, error)
+		validate  func(*testing.T, *domain.PaginatedResult[domain.Tag], error)
 	}{
 		{
-			name: "success with multiple tags",
+			name: "success with default pagination",
+			params: domain.PaginationParams{
+				Limit:  0, // Should default to 50
+				Offset: 0,
+			},
 			setupMock: func(repo *mocks.MockTagRepository) {
 				tags := []domain.Tag{
 					{
@@ -42,38 +47,121 @@ func TestUseCase_Execute(t *testing.T) {
 						UpdatedAt:   time.Now().Add(-1 * time.Hour),
 					},
 				}
+				expectedParams := domain.PaginationParams{Limit: domain.DefaultLimit, Offset: 0}
 				repo.EXPECT().
-					FindAllTags(ctx).
-					Return(tags, nil)
+					FindAllTags(ctx, expectedParams).
+					Return(tags, 100, nil)
 			},
-			validate: func(t *testing.T, result []domain.Tag, err error) {
+			validate: func(t *testing.T, result *domain.PaginatedResult[domain.Tag], err error) {
 				assert.NoError(t, err)
-				assert.Len(t, result, 2)
-				assert.Equal(t, "soccer", result[0].Name)
-				assert.Equal(t, "basketball", result[1].Name)
+				assert.Len(t, result.Items, 2)
+				assert.Equal(t, domain.DefaultLimit, result.Limit)
+				assert.Equal(t, 0, result.Offset)
+				assert.Equal(t, 100, result.Total)
+			},
+		},
+		{
+			name: "success with custom pagination",
+			params: domain.PaginationParams{
+				Limit:  10,
+				Offset: 20,
+			},
+			setupMock: func(repo *mocks.MockTagRepository) {
+				tags := []domain.Tag{{ID: uuid.New(), Name: "soccer"}}
+				expectedParams := domain.PaginationParams{Limit: 10, Offset: 20}
+				repo.EXPECT().
+					FindAllTags(ctx, expectedParams).
+					Return(tags, 100, nil)
+			},
+			validate: func(t *testing.T, result *domain.PaginatedResult[domain.Tag], err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, 10, result.Limit)
+				assert.Equal(t, 20, result.Offset)
+				assert.Equal(t, 100, result.Total)
 			},
 		},
 		{
 			name: "success with empty result",
-			setupMock: func(repo *mocks.MockTagRepository) {
-				repo.EXPECT().
-					FindAllTags(ctx).
-					Return([]domain.Tag{}, nil)
+			params: domain.PaginationParams{
+				Limit:  50,
+				Offset: 0,
 			},
-			validate: func(t *testing.T, result []domain.Tag, err error) {
+			setupMock: func(repo *mocks.MockTagRepository) {
+				expectedParams := domain.PaginationParams{Limit: 50, Offset: 0}
+				repo.EXPECT().
+					FindAllTags(ctx, expectedParams).
+					Return([]domain.Tag{}, 0, nil)
+			},
+			validate: func(t *testing.T, result *domain.PaginatedResult[domain.Tag], err error) {
 				assert.NoError(t, err)
-				assert.Empty(t, result)
-				assert.NotNil(t, result) // Should be empty slice, not nil
+				assert.Empty(t, result.Items)
+				assert.Equal(t, 0, result.Total)
+			},
+		},
+		{
+			name: "validation error - negative limit",
+			params: domain.PaginationParams{
+				Limit:  -1,
+				Offset: 0,
+			},
+			setupMock: func(repo *mocks.MockTagRepository) {},
+			validate: func(t *testing.T, result *domain.PaginatedResult[domain.Tag], err error) {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+				var domainErr *domain.Error
+				if assert.ErrorAs(t, err, &domainErr) {
+					assert.Equal(t, domain.InvalidEntityCode, domainErr.Code)
+					assert.Contains(t, domainErr.Details, "limit cannot be negative")
+				}
+			},
+		},
+		{
+			name: "validation error - negative offset",
+			params: domain.PaginationParams{
+				Limit:  10,
+				Offset: -5,
+			},
+			setupMock: func(repo *mocks.MockTagRepository) {},
+			validate: func(t *testing.T, result *domain.PaginatedResult[domain.Tag], err error) {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+				var domainErr *domain.Error
+				if assert.ErrorAs(t, err, &domainErr) {
+					assert.Equal(t, domain.InvalidEntityCode, domainErr.Code)
+					assert.Contains(t, domainErr.Details, "offset cannot be negative")
+				}
+			},
+		},
+		{
+			name: "validation error - limit exceeds max",
+			params: domain.PaginationParams{
+				Limit:  200,
+				Offset: 0,
+			},
+			setupMock: func(repo *mocks.MockTagRepository) {},
+			validate: func(t *testing.T, result *domain.PaginatedResult[domain.Tag], err error) {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+				var domainErr *domain.Error
+				if assert.ErrorAs(t, err, &domainErr) {
+					assert.Equal(t, domain.InvalidEntityCode, domainErr.Code)
+					assert.Contains(t, domainErr.Details, "cannot exceed")
+				}
 			},
 		},
 		{
 			name: "repository error",
-			setupMock: func(repo *mocks.MockTagRepository) {
-				repo.EXPECT().
-					FindAllTags(ctx).
-					Return(nil, errors.New("database connection failed"))
+			params: domain.PaginationParams{
+				Limit:  10,
+				Offset: 0,
 			},
-			validate: func(t *testing.T, result []domain.Tag, err error) {
+			setupMock: func(repo *mocks.MockTagRepository) {
+				expectedParams := domain.PaginationParams{Limit: 10, Offset: 0}
+				repo.EXPECT().
+					FindAllTags(ctx, expectedParams).
+					Return(nil, 0, errors.New("database connection failed"))
+			},
+			validate: func(t *testing.T, result *domain.PaginatedResult[domain.Tag], err error) {
 				assert.Error(t, err)
 				assert.Nil(t, result)
 				var domainErr *domain.Error
@@ -94,7 +182,7 @@ func TestUseCase_Execute(t *testing.T) {
 			tt.setupMock(repo)
 
 			uc := New(repo)
-			result, err := uc.Execute(ctx)
+			result, err := uc.Execute(ctx, tt.params)
 
 			tt.validate(t, result, err)
 		})

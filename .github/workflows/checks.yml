@@ -9,12 +9,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version-file: go.mod
+    
+    - name: deps
+      run: make setup
 
     - name: Build
       run: make build
@@ -32,6 +35,10 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+      
+      - name: setup
+        run: make setup
+
       - uses: golangci/golangci-lint-action@v8
         with:
           version: v2.4.0

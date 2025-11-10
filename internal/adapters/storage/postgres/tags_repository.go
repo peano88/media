@@ -61,17 +61,31 @@ func (tr *TagRepository) CreateTag(ctx context.Context, tag domain.Tag) (domain.
 	return created, nil
 }
 
-// FindAllTags retrieves all tags from the database
-func (tr *TagRepository) FindAllTags(ctx context.Context) ([]domain.Tag, error) {
+// FindAllTags retrieves paginated tags from the database and returns total count
+func (tr *TagRepository) FindAllTags(ctx context.Context, params domain.PaginationParams) ([]domain.Tag, int, error) {
+	// Get total count
+	var total int
+	countQuery := "SELECT COUNT(*) FROM tags"
+	err := tr.pool.QueryRow(ctx, countQuery).Scan(&total)
+	if err != nil {
+		return nil, 0, domain.NewError(domain.InternalCode,
+			domain.WithMessage("failed to count tags"),
+			domain.WithDetails(err.Error()),
+			domain.WithTS(time.Now()),
+		)
+	}
+
+	// Get paginated results (ASC ordering for stable pagination)
 	query := `
 		SELECT id, name, description, created_at, updated_at
 		FROM tags
-		ORDER BY created_at DESC
+		ORDER BY created_at ASC
+		LIMIT $1 OFFSET $2
 	`
 
-	rows, err := tr.pool.Query(ctx, query)
+	rows, err := tr.pool.Query(ctx, query, params.Limit, params.Offset)
 	if err != nil {
-		return nil, domain.NewError(domain.InternalCode,
+		return nil, 0, domain.NewError(domain.InternalCode,
 			domain.WithMessage("failed to retrieve tags"),
 			domain.WithDetails(err.Error()),
 			domain.WithTS(time.Now()),
@@ -81,12 +95,12 @@ func (tr *TagRepository) FindAllTags(ctx context.Context) ([]domain.Tag, error) 
 
 	tags, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.Tag])
 	if err != nil {
-		return nil, domain.NewError(domain.InternalCode,
+		return nil, 0, domain.NewError(domain.InternalCode,
 			domain.WithMessage("failed to collect tags"),
 			domain.WithDetails(err.Error()),
 			domain.WithTS(time.Now()),
 		)
 	}
 
-	return tags, nil
+	return tags, total, nil
 }

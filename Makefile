@@ -1,4 +1,4 @@
-.PHONY: help build run test clean docker-build docker-up docker-down migrate-up migrate-down lint mocks
+.PHONY: help build run test clean docker-build docker-up docker-down migrate-up migrate-down lint mocks install-tools setup
 
 # Default target
 help: ## Show this help message
@@ -107,6 +107,14 @@ deps-update: ## Update dependencies
 	@echo "Updating dependencies..."
 	@go get -u ./...
 	@go mod tidy
+
+install-tools: ## Install development tools (mockgen, etc.)
+	@echo "Installing development tools..."
+	@go install go.uber.org/mock/mockgen@latest
+	@echo "Tools installed successfully"
+
+setup: deps install-tools ## Setup project (install dependencies and tools)
+	@echo "Project setup complete!"
 
 # Local development with DB only
 db-up: ## Start only PostgreSQL (for local development)

@@ -19,31 +19,32 @@ import (
 func TestHandleGetTags(t *testing.T) {
 	tests := []struct {
 		name      string
+		url       string
 		setupMock func(*mocks.MockTagRetriever)
 		validate  func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
-			name: "success with multiple tags",
+			name: "success with default pagination",
+			url:  "/api/v1/tags",
 			setupMock: func(tr *mocks.MockTagRetriever) {
-				tags := []domain.Tag{
-					{
-						ID:          uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
-						Name:        "soccer",
-						Description: stringPtr("Football matches"),
-						CreatedAt:   time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
-						UpdatedAt:   time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+				expectedParams := domain.PaginationParams{Limit: 0, Offset: 0}
+				result := &domain.PaginatedResult[domain.Tag]{
+					Items: []domain.Tag{
+						{
+							ID:          uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+							Name:        "soccer",
+							Description: stringPtr("Football matches"),
+							CreatedAt:   time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+							UpdatedAt:   time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+						},
 					},
-					{
-						ID:          uuid.MustParse("123e4567-e89b-12d3-a456-426614174001"),
-						Name:        "basketball",
-						Description: nil,
-						CreatedAt:   time.Date(2024, 1, 2, 12, 0, 0, 0, time.UTC),
-						UpdatedAt:   time.Date(2024, 1, 2, 12, 0, 0, 0, time.UTC),
-					},
+					Total:  100,
+					Limit:  domain.DefaultLimit,
+					Offset: 0,
 				}
 				tr.EXPECT().
-					Execute(gomock.Any()).
-					Return(tags, nil)
+					Execute(gomock.Any(), expectedParams).
+					Return(result, nil)
 			},
 			validate: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusOK, rec.Code)
@@ -52,19 +53,57 @@ func TestHandleGetTags(t *testing.T) {
 				var response getTagsResponse
 				err := json.NewDecoder(rec.Body).Decode(&response)
 				assert.NoError(t, err)
-				assert.Len(t, response.Data, 2)
-				assert.Equal(t, "soccer", response.Data[0].Name)
-				assert.Equal(t, "basketball", response.Data[1].Name)
-				assert.NotNil(t, response.Data[0].Description)
-				assert.Nil(t, response.Data[1].Description)
+				assert.Len(t, response.Data, 1)
+				assert.Equal(t, domain.DefaultLimit, response.Pagination.Limit)
+				assert.Equal(t, 0, response.Pagination.Offset)
+				assert.Equal(t, 100, response.Pagination.Total)
+			},
+		},
+		{
+			name: "success with custom pagination",
+			url:  "/api/v1/tags?limit=10&offset=20",
+			setupMock: func(tr *mocks.MockTagRetriever) {
+				expectedParams := domain.PaginationParams{Limit: 10, Offset: 20}
+				result := &domain.PaginatedResult[domain.Tag]{
+					Items: []domain.Tag{
+						{
+							ID:   uuid.MustParse("123e4567-e89b-12d3-a456-426614174001"),
+							Name: "basketball",
+						},
+					},
+					Total:  100,
+					Limit:  10,
+					Offset: 20,
+				}
+				tr.EXPECT().
+					Execute(gomock.Any(), expectedParams).
+					Return(result, nil)
+			},
+			validate: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusOK, rec.Code)
+
+				var response getTagsResponse
+				err := json.NewDecoder(rec.Body).Decode(&response)
+				assert.NoError(t, err)
+				assert.Equal(t, 10, response.Pagination.Limit)
+				assert.Equal(t, 20, response.Pagination.Offset)
+				assert.Equal(t, 100, response.Pagination.Total)
 			},
 		},
 		{
 			name: "success with empty result",
+			url:  "/api/v1/tags",
 			setupMock: func(tr *mocks.MockTagRetriever) {
+				expectedParams := domain.PaginationParams{Limit: 0, Offset: 0}
+				result := &domain.PaginatedResult[domain.Tag]{
+					Items:  []domain.Tag{},
+					Total:  0,
+					Limit:  domain.DefaultLimit,
+					Offset: 0,
+				}
 				tr.EXPECT().
-					Execute(gomock.Any()).
-					Return([]domain.Tag{}, nil)
+					Execute(gomock.Any(), expectedParams).
+					Return(result, nil)
 			},
 			validate: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				assert.Equal(t, http.StatusOK, rec.Code)
@@ -74,17 +113,42 @@ func TestHandleGetTags(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Empty(t, response.Data)
 				assert.NotNil(t, response.Data) // Should be empty array, not null
+				assert.Equal(t, 0, response.Pagination.Total)
+			},
+		},
+		{
+			name: "invalid pagination parameters",
+			url:  "/api/v1/tags?limit=-1",
+			setupMock: func(tr *mocks.MockTagRetriever) {
+				expectedParams := domain.PaginationParams{Limit: -1, Offset: 0}
+				validationErr := domain.NewError(domain.InvalidEntityCode,
+					domain.WithMessage("invalid pagination parameters"),
+					domain.WithDetails("limit cannot be negative"),
+				)
+				tr.EXPECT().
+					Execute(gomock.Any(), expectedParams).
+					Return(nil, validationErr)
+			},
+			validate: func(t *testing.T, rec *httptest.ResponseRecorder) {
+				assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+
+				var response errorResponse
+				err := json.NewDecoder(rec.Body).Decode(&response)
+				assert.NoError(t, err)
+				assert.Equal(t, domain.InvalidEntityCode, response.Error.Code)
 			},
 		},
 		{
 			name: "internal error",
+			url:  "/api/v1/tags",
 			setupMock: func(tr *mocks.MockTagRetriever) {
+				expectedParams := domain.PaginationParams{Limit: 0, Offset: 0}
 				internalErr := domain.NewError(domain.InternalCode,
 					domain.WithMessage("database error"),
 					domain.WithTS(time.Now()),
 				)
 				tr.EXPECT().
-					Execute(gomock.Any()).
+					Execute(gomock.Any(), expectedParams).
 					Return(nil, internalErr)
 			},
 			validate: func(t *testing.T, rec *httptest.ResponseRecorder) {
@@ -108,7 +172,7 @@ func TestHandleGetTags(t *testing.T) {
 
 			handler := HandleGetTags(mockTR)
 
-			req := httptest.NewRequest(http.MethodGet, "/api/v1/tags", nil)
+			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
 			rec := httptest.NewRecorder()
 
 			handler(rec, req)

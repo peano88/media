@@ -92,19 +92,64 @@ func TestTagRepository_FindAllTags(t *testing.T) {
 	tests := []struct {
 		name              string
 		ctx               context.Context
+		params            domain.PaginationParams
 		expectedNames     []string
+		expectedTotal     int
 		expectedErrorCode string
 	}{
 		{
-			name:              "returns all tags ordered by created_at desc",
-			ctx:               ctx,
-			expectedNames:     []string{"football", "basketball", "soccer"},
+			name: "returns all tags ordered by created_at asc",
+			ctx:  ctx,
+			params: domain.PaginationParams{
+				Limit:  50,
+				Offset: 0,
+			},
+			expectedNames:     []string{"soccer", "basketball", "football"},
+			expectedTotal:     3,
 			expectedErrorCode: "",
 		},
 		{
-			name:              "cancelled context",
-			ctx:               cancelCtx,
+			name: "pagination with limit",
+			ctx:  ctx,
+			params: domain.PaginationParams{
+				Limit:  2,
+				Offset: 0,
+			},
+			expectedNames:     []string{"soccer", "basketball"},
+			expectedTotal:     3,
+			expectedErrorCode: "",
+		},
+		{
+			name: "pagination with offset",
+			ctx:  ctx,
+			params: domain.PaginationParams{
+				Limit:  2,
+				Offset: 1,
+			},
+			expectedNames:     []string{"basketball", "football"},
+			expectedTotal:     3,
+			expectedErrorCode: "",
+		},
+		{
+			name: "pagination beyond available data",
+			ctx:  ctx,
+			params: domain.PaginationParams{
+				Limit:  10,
+				Offset: 100,
+			},
+			expectedNames:     []string{},
+			expectedTotal:     3,
+			expectedErrorCode: "",
+		},
+		{
+			name: "cancelled context",
+			ctx:  cancelCtx,
+			params: domain.PaginationParams{
+				Limit:  10,
+				Offset: 0,
+			},
 			expectedNames:     nil,
+			expectedTotal:     0,
 			expectedErrorCode: domain.InternalCode,
 		},
 	}
@@ -112,9 +157,10 @@ func TestTagRepository_FindAllTags(t *testing.T) {
 	repo := NewTagRepository(testPool)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tags, err := repo.FindAllTags(tt.ctx)
+			tags, total, err := repo.FindAllTags(tt.ctx, tt.params)
 			if tt.expectedErrorCode == "" {
 				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedTotal, total)
 				assert.Len(t, tags, len(tt.expectedNames))
 				assert.NotNil(t, tags) // Should return empty slice, not nil
 
@@ -130,9 +176,9 @@ func TestTagRepository_FindAllTags(t *testing.T) {
 					assert.NotEmpty(t, tag.UpdatedAt)
 				}
 
-				// Verify expected tags are present
-				for _, expectedName := range tt.expectedNames {
-					assert.Contains(t, tagNames, expectedName)
+				// Verify expected tags are present in order
+				for i, expectedName := range tt.expectedNames {
+					assert.Equal(t, expectedName, tagNames[i])
 				}
 			} else {
 				var domainErr *domain.Error
@@ -152,9 +198,11 @@ func TestTagRepository_FindAllTags_EmptyTable(t *testing.T) {
 	assert.NoError(t, err)
 
 	repo := NewTagRepository(testPool)
-	tags, err := repo.FindAllTags(context.Background())
+	params := domain.PaginationParams{Limit: 50, Offset: 0}
+	tags, total, err := repo.FindAllTags(context.Background(), params)
 
 	assert.NoError(t, err)
 	assert.Empty(t, tags)
+	assert.Equal(t, 0, total)
 	assert.NotNil(t, tags) // Should be empty slice, not nil
 }
