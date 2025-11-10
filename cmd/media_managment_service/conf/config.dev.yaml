@@ -1,2 +1,9 @@
 server:
   listen-port: 8080
+
+database:
+  host: localhost
+  port: 5432
+  database: medias_dev
+  user: medias_user
+  ssl-mode: disable

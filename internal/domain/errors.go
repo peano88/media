@@ -23,6 +23,7 @@ func (e *Error) Error() string {
 const (
 	InvalidEntityCode = "INVALID"
 	InternalCode      = "INTERNAL"
+	ConflictCode      = "CONFLICT"
 )
 
 type ErrOpts func(*Error) *Error

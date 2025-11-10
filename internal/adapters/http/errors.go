@@ -17,6 +17,8 @@ func errorCodeToHTTPCode(code string) int {
 		return http.StatusUnprocessableEntity
 	case domain.InternalCode:
 		return http.StatusInternalServerError
+	case domain.ConflictCode:
+		return http.StatusConflict
 	default:
 		return http.StatusInternalServerError
 	}

@@ -5,3 +5,4 @@ main.go.bkp
 uploader
 service 
 cmd/media_managment_service/main
+.env

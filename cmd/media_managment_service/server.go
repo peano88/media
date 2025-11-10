@@ -8,15 +8,14 @@ import (
 	nethttp "net/http"
 	"time"
 
-	"github.com/peano88/medias/config"
 	"github.com/peano88/medias/internal/adapters/http"
 )
 
 // newServer creates and configures a new HTTP server
-func newServer(ctx context.Context, cfg *config.Config, deps http.Dependencies) *nethttp.Server {
+func newServer(ctx context.Context, cfg *ServerConfig, deps http.Dependencies) *nethttp.Server {
 	r := http.NewRouter(deps)
 
-	addr := fmt.Sprintf(":%d", cfg.Server.Port)
+	addr := fmt.Sprintf(":%d", cfg.Port)
 
 	server := &nethttp.Server{
 		Addr:              addr,
@@ -35,7 +34,7 @@ func newServer(ctx context.Context, cfg *config.Config, deps http.Dependencies) 
 }
 
 // runServer starts the HTTP server and handles graceful shutdown
-func runServer(ctx context.Context, server *nethttp.Server, cfg *config.Config, logger *slog.Logger) error {
+func runServer(ctx context.Context, server *nethttp.Server, cfg *ServerConfig, logger *slog.Logger) error {
 	// Start server in goroutine
 	errChan := make(chan error, 1)
 	go func() {
@@ -57,7 +56,7 @@ func runServer(ctx context.Context, server *nethttp.Server, cfg *config.Config, 
 	logger.Info("Shutting down server")
 
 	// Create shutdown context with timeout
-	shutDownCtx, cancelShutDownCtx := context.WithTimeout(context.Background(), time.Duration(cfg.Server.ShutdownTimeoutSeconds)*time.Second)
+	shutDownCtx, cancelShutDownCtx := context.WithTimeout(context.Background(), time.Duration(cfg.ShutdownTimeoutSeconds)*time.Second)
 	defer cancelShutDownCtx()
 
 	// Attempt graceful shutdown

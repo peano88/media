@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: medias-postgres
+    environment:
+      POSTGRES_DB: medias_dev
+      POSTGRES_USER: medias_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dev_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medias_user -d medias_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - medias-network
+
+  migrate:
+    image: gomicro/goose
+    container_name: medias-migrate
+    environment:
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: postgres://medias_user:${DB_PASSWORD:-dev_password}@postgres:5432/medias_dev?sslmode=disable
+    volumes:
+      - ./migrations:/migrations:ro
+    command: ["goose", "up"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - medias-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: medias-app
+    environment:
+      ENV: dev
+      CONFIG_PATH: /app/config
+      DB_PASSWORD: ${DB_PASSWORD:-dev_password}
+      DATABASE_HOST: postgres
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - medias-network
+    volumes:
+      - ./cmd/media_managment_service/conf:/app/config:ro
+
+volumes:
+  postgres_data:
+
+networks:
+  medias-network:
+    driver: bridge

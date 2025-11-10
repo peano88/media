@@ -17,6 +17,17 @@
 13. implement GET /media/<id>
 14. develop tools for downloading media files;
 
+## tech choices
+
+### Database driver: pgx vs lib/pq
+
+**Decision: Use `github.com/jackc/pgx/v5` with `pgxpool`**
+
+**Rationale:**
+- **Performance**: 2-3x faster than lib/pq for most operations due to native PostgreSQL protocol implementation
+- **Prepared statements**: Automatic prepared statement caching by default, reducing database overhead for repeated queries
+- **Connection pooling**: Native `pgxpool` provides better connection management with configurable min/max connections, lifecycle, and health checks
+
 ## building 
 
 1. locally with go build and go run;

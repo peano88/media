@@ -1,0 +1,17 @@
+- id: 123e4567-e89b-12d3-a456-426614174000
+  name: soccer
+  description: Football matches and soccer events
+  created_at: 2023-01-01 12:00:00
+  updated_at: 2023-01-01 12:00:00
+
+- id: 223e4567-e89b-12d3-a456-426614174000
+  name: basketball
+  description: Basketball games and court action
+  created_at: 2023-01-02 12:00:00
+  updated_at: 2023-01-02 12:00:00
+
+- id: 323e4567-e89b-12d3-a456-426614174000
+  name: football
+  description: American football and NFL games
+  created_at: 2023-01-03 12:00:00
+  updated_at: 2023-01-03 12:00:00

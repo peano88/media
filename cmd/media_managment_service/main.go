@@ -8,13 +8,14 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/peano88/medias/config"
 	"github.com/peano88/medias/internal/adapters/http"
+	"github.com/peano88/medias/internal/adapters/storage/postgres"
+	"github.com/peano88/medias/internal/app/createtag"
 )
 
 func main() {
 	// Load configuration
-	cfg, err := config.Load()
+	cfg, err := LoadConfig()
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
@@ -27,19 +28,35 @@ func main() {
 		slog.String("version", "0.0.1"),
 		slog.String("env", cfg.Env()),
 	)
-	logger.Info("Configuration loaded", slog.Any("configuration", cfg.AllSettings()))
+	logger.Info("Configuration loaded", slog.Any("configuration", cfg.ConfigLoader().AllSettings()))
+
+	pool, err := postgres.NewPool(ctx, &cfg.Database)
+	if err != nil {
+		logger.Error("Failed to create database pool",
+			slog.String("error", err.Error()),
+		)
+		os.Exit(1)
+	}
+	defer pool.Close()
+	logger.Info("Database connection pool established")
+
+	// Create repositories
+	tagRepo := postgres.NewTagRepository(pool)
+
+	// Create use cases
+	createTagUseCase := createtag.New(tagRepo)
 
 	deps := http.Dependencies{
-		TagCreator:      http.DummyTagCreator{},
+		TagCreator:      createTagUseCase,
 		Logger:          logger,
 		MetricForwarder: http.DummyMetricsForwarder{},
 	}
 
 	// Create server
-	server := newServer(ctx, cfg, deps)
+	server := newServer(ctx, &cfg.Server, deps)
 
 	// Run server with graceful shutdown
-	if err := runServer(ctx, server, cfg, logger); err != nil {
+	if err := runServer(ctx, server, &cfg.Server, logger); err != nil {
 		logger.Error("Server error", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
