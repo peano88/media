@@ -22,17 +22,6 @@ jobs:
     - name: Test
       run: make test
 
-  checks:
-    name: Run staticcheck
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 1
-    - uses: dominikh/staticcheck-action@v1.2.0
-      with:
-        version: latest
-
   lint:
     name: lint
     runs-on: ubuntu-latest

@@ -1,4 +1,4 @@
-.PHONY: help build run test clean docker-build docker-up docker-down migrate-up migrate-down lint
+.PHONY: help build run test clean docker-build docker-up docker-down migrate-up migrate-down lint mocks
 
 # Default target
 help: ## Show this help message
@@ -22,12 +22,17 @@ run: ## Run the service locally
 	@echo "Running service..."
 	@go run ./cmd/media_managment_service
 
+# Mock generation
+mocks: ## Generate mocks for testing
+	@echo "Generating mocks..."
+	@go generate ./...
+
 # Test targets
-test: ## Run all tests
+test: mocks ## Run all tests
 	@echo "Running tests..."
 	@go test -v ./...
 
-test-coverage: ## Run tests with coverage
+test-coverage: mocks ## Run tests with coverage
 	@echo "Running tests with coverage..."
 	@go test -v -coverprofile=coverage.out ./...
 	@go tool cover -html=coverage.out -o coverage.html

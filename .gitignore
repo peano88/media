@@ -3,6 +3,14 @@ bin/
 food_for_thoughts.md
 main.go.bkp
 uploader
-service 
+service
 .env
 cmd/media_managment_service/media_managment_service
+
+# Generated mocks
+**/mocks/
+*_mock.go
+
+# Test coverage
+coverage.out
+coverage.html
