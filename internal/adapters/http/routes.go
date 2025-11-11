@@ -14,6 +14,7 @@ const BasePath = "/api/v1"
 type Dependencies struct {
 	TagCreator      TagCreator
 	TagRetriever    TagRetriever
+	MediaCreator    MediaCreator
 	Logger          *slog.Logger
 	MetricForwarder MetricsForwarder
 }
@@ -36,6 +37,7 @@ func NewRouter(deps Dependencies) chi.Router {
 
 	apiRouter.Post("/tags", HandlePostTags(deps.TagCreator))
 	apiRouter.Get("/tags", HandleGetTags(deps.TagRetriever))
+	apiRouter.Post("/media", HandlePostMedia(deps.MediaCreator))
 
 	r.Mount(BasePath, apiRouter)
 	return r

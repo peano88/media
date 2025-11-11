@@ -12,7 +12,7 @@ type createTagResponse struct {
 }
 
 type getTagsResponse struct {
-	Data       []tagData           `json:"data"`
+	Data       []tagData          `json:"data"`
 	Pagination paginationMetadata `json:"pagination"`
 }
 
@@ -26,8 +26,8 @@ type tagData struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
 	Description *string   `json:"description,omitempty"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type errorResponse struct {
@@ -40,4 +40,31 @@ type errorDetails struct {
 	Details   *string    `json:"details,omitempty"`
 	Timestamp *time.Time `json:"timestamp,omitempty"`
 	RequestID *string    `json:"request_id,omitempty"`
+}
+
+type createMediaRequest struct {
+	Title       string   `json:"title"`
+	Description *string  `json:"description,omitempty"`
+	MimeType    string   `json:"mime_type"`
+	Size        int64    `json:"size"`
+	SHA256      string   `json:"sha256"`
+	Tags        []string `json:"tags,omitempty"`
+}
+
+type createMediaResponse struct {
+	Data mediaData `json:"data"`
+}
+
+type mediaData struct {
+	ID          string    `json:"id"`
+	Filename    string    `json:"filename"`
+	Description *string   `json:"description,omitempty"`
+	Status      string    `json:"status"`
+	URL         string    `json:"url"`
+	Type        string    `json:"type"`
+	MimeType    string    `json:"mime_type"`
+	Size        int64     `json:"size"`
+	Tags        []tagData `json:"tags"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }

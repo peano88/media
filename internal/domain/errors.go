@@ -24,6 +24,7 @@ const (
 	InvalidEntityCode = "INVALID"
 	InternalCode      = "INTERNAL"
 	ConflictCode      = "CONFLICT"
+	NotFoundCode      = "NOT_FOUND"
 )
 
 type ErrOpts func(*Error) *Error
@@ -72,4 +73,13 @@ func WithTS(ts time.Time) ErrOpts {
 		err.Timestamp = ts
 		return err
 	}
+}
+
+// HasCode checks if an error has the specified error code
+func HasCode(err error, code string) bool {
+	var domainErr *Error
+	if errors.As(err, &domainErr) {
+		return domainErr.Code == code
+	}
+	return false
 }

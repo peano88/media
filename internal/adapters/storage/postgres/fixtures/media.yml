@@ -1,0 +1,32 @@
+- id: 111e1111-e11b-11d1-a111-111111111111
+  filename: world-cup-final.jpg
+  description: Amazing goal from the final match
+  status: finalized
+  type: image
+  mime_type: image/jpeg
+  size: 2048000
+  sha256: w0rldcup2023
+  created_at: 2023-06-01 10:00:00
+  updated_at: 2023-06-01 11:00:00
+
+- id: 222e2222-e22b-22d2-a222-222222222222
+  filename: tennis-serve.mp4
+  description: null
+  status: reserved
+  type: video
+  mime_type: video/mp4
+  size: 15000000
+  sha256: t3nn1ss3rv3
+  created_at: 2023-06-02 14:00:00
+  updated_at: 2023-06-02 14:00:00
+
+- id: 333e3333-e33b-33d3-a333-333333333333
+  filename: hockey-goal.jpg
+  description: Game winning goal
+  status: failed
+  type: image
+  mime_type: image/jpeg
+  size: 1500000
+  sha256: h0ck3yg04l
+  created_at: 2023-06-03 16:00:00
+  updated_at: 2023-06-03 17:00:00

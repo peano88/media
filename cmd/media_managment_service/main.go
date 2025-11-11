@@ -8,9 +8,11 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/peano88/medias/internal/adapters/filestorage/dummy"
 	"github.com/peano88/medias/internal/adapters/http"
 	"github.com/peano88/medias/internal/adapters/metrics/expvar"
 	"github.com/peano88/medias/internal/adapters/storage/postgres"
+	"github.com/peano88/medias/internal/app/createmedia"
 	"github.com/peano88/medias/internal/app/createtag"
 	"github.com/peano88/medias/internal/app/gettags"
 )
@@ -44,14 +46,20 @@ func main() {
 
 	// Create repositories
 	tagRepo := postgres.NewTagRepository(pool)
+	mediaRepo := postgres.NewMediaRepository(pool)
+
+	// Create file storage adapter
+	mediaSaver := dummy.NewMediaSaver("http://localhost:8080") // TODO: configure base URL
 
 	// Create use cases
 	createTagUseCase := createtag.New(tagRepo)
 	getTagsUseCase := gettags.New(tagRepo)
+	createMediaUseCase := createmedia.New(mediaRepo, mediaSaver)
 
 	deps := http.Dependencies{
 		TagCreator:      createTagUseCase,
 		TagRetriever:    getTagsUseCase,
+		MediaCreator:    createMediaUseCase,
 		Logger:          logger,
 		MetricForwarder: expvar.NewExpvarMetrics(),
 	}

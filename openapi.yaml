@@ -301,12 +301,12 @@ components:
           description: Description of the tag
           maxLength: 255
           example: "Images related to nature and landscapes"
-        createdAt:
+        created_at:
           type: string
           format: date-time
           description: Creation timestamp
           example: "2023-01-01T12:00:00Z"
-        updatedAt:
+        updated_at:
           type: string
           format: date-time
           description: Last update timestamp
@@ -314,8 +314,8 @@ components:
       required:
         - id
         - name
-        - createdAt
-        - updatedAt
+        - created_at
+        - updated_at
 
     CreateTagRequest:
       type: object
@@ -342,11 +342,6 @@ components:
           format: uuid
           description: Unique identifier for the media file
           example: "123e4567-e89b-12d3-a456-426614174000"
-        title:
-          type: string
-          description: Title of the media file
-          maxLength: 255
-          example: "Beautiful Sunset"
         description:
           type: string
           description: Description of the media file
@@ -372,7 +367,7 @@ components:
           enum: [image, video, audio, document]
           description: Type of media file
           example: "image"
-        mimeType:
+        mime_type:
           type: string
           description: MIME type of the file
           example: "image/jpeg"
@@ -385,48 +380,51 @@ components:
           items:
             $ref: '#/components/schemas/Tag'
           description: Tags associated with the media file
-        createdAt:
+        created_at:
           type: string
           format: date-time
           description: Creation timestamp
           example: "2023-01-01T12:00:00Z"
-        updatedAt:
+        updated_at:
           type: string
           format: date-time
           description: Last update timestamp
           example: "2023-01-01T12:00:00Z"
       required:
         - id
-        - title
         - filename
         - url
         - type
-        - mimeType
+        - mime_type
         - size
-        - createdAt
-        - updatedAt
+        - created_at
+        - updated_at
 
     CreateMediaRequest:
       type: object
       properties:
         title:
           type: string
-          description: Title of the media file
+          description: Filename of the media file
           minLength: 1
           maxLength: 255
-          example: "Beautiful Sunset"
+          example: "sunset.jpg"
         description:
           type: string
           description: Description of the media file
           maxLength: 1000
           example: "A stunning sunset over the mountains"
+        mime_type:
+          type: string
+          description: MIME type of the file (must be image/* or video/*)
+          example: "image/jpeg"
         tags:
           type: array
           items:
             type: string
           description: Tag names to associate with the media file
           example: ["nature", "landscape", "sunset"]
-        sha256: 
+        sha256:
           type: string
           format: base64
           description: base64 encoded sha256 of the file to upload
@@ -435,6 +433,7 @@ components:
          description: file size in bytes. it will be checked in the finalization step
       required:
         - title
+        - mimeType
         - sha256
         - size
 
