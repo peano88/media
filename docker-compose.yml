@@ -20,6 +20,16 @@ services:
     networks:
       - medias-network
 
+  s3ninja:
+    image: scireum/s3-ninja:latest
+    container_name: medias-s3ninja
+    ports:
+      - "9444:9000"
+    volumes:
+      - s3ninja_data:/home/sirius/data
+    networks:
+      - medias-network
+
   migrate:
     image: gomicro/goose
     container_name: medias-migrate
@@ -45,6 +55,10 @@ services:
       CONFIG_PATH: /app/config
       DB_PASSWORD: ${DB_PASSWORD:-dev_password}
       DATABASE_HOST: postgres
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-AKIAIOSFODNN7EXAMPLE}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY}
+      S3_ENDPOINT: http://s3ninja:9000
+      S3_PUBLIC_ENDPOINT: http://localhost:9444
     ports:
       - "8080:8080"
     depends_on:
@@ -52,6 +66,8 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      s3ninja:
+        condition: service_started
     networks:
       - medias-network
     volumes:
@@ -59,6 +75,7 @@ services:
 
 volumes:
   postgres_data:
+  s3ninja_data:
 
 networks:
   medias-network:

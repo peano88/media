@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/peano88/medias/internal/adapters/filestorage/dummy"
+	"github.com/peano88/medias/internal/adapters/filestorage/s3"
 	"github.com/peano88/medias/internal/adapters/http"
 	"github.com/peano88/medias/internal/adapters/metrics/expvar"
 	"github.com/peano88/medias/internal/adapters/storage/postgres"
@@ -49,7 +49,14 @@ func main() {
 	mediaRepo := postgres.NewMediaRepository(pool)
 
 	// Create file storage adapter
-	mediaSaver := dummy.NewMediaSaver("http://localhost:8080") // TODO: configure base URL
+	mediaSaver, err := s3.NewMediaSaver(ctx, cfg.S3, logger)
+	if err != nil {
+		logger.Error("Failed to create S3 media saver",
+			slog.String("error", err.Error()),
+		)
+		os.Exit(1)
+	}
+	logger.Info("S3 media saver initialized")
 
 	// Create use cases
 	createTagUseCase := createtag.New(tagRepo)

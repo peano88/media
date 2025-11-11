@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/peano88/medias/config"
+	"github.com/peano88/medias/internal/adapters/filestorage/s3"
 	"github.com/peano88/medias/internal/adapters/storage/postgres"
 )
 
@@ -10,6 +11,7 @@ type applicationConfig struct {
 	*config.Config
 	Server   ServerConfig    `mapstructure:"server"`
 	Database postgres.Config `mapstructure:"database"`
+	S3       s3.Config       `mapstructure:"s3"`
 }
 
 // ServerConfig holds HTTP server configuration
@@ -25,6 +27,7 @@ func LoadConfig() (*applicationConfig, error) {
 	cfgLoader.SetDefault("server.shutdown-timeout-seconds", 20)
 	cfgLoader.SetDefault("server.listen-port", 8080)
 	postgres.SetDefaultConfig(cfgLoader, "database")
+	s3.SetDefaultConfig(cfgLoader, "s3")
 
 	if err := baseConfig.Load(); err != nil {
 		return nil, err

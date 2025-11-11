@@ -1,2 +1,11 @@
 server:
   listen-port: 8080
+
+database:
+  host: postgres
+  port: 5432
+  database: medias_prod
+  user: medias_user
+
+s3:
+  bucket-name: medias-prod

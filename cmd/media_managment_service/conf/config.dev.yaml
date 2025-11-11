@@ -7,3 +7,9 @@ database:
   database: medias_dev
   user: medias_user
   ssl-mode: disable
+
+s3:
+  region: eu-central-1
+  endpoint: http://localhost:9444
+  public-endpoint: http://localhost:9444
+  bucket-name: medias-dev
