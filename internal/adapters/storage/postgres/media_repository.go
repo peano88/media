@@ -76,7 +76,9 @@ func (mr *MediaRepository) CreateMedia(ctx context.Context, media domain.Media, 
 			domain.WithTS(time.Now()),
 		)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
 
 	// Insert media record
 	query := `

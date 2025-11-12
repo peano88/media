@@ -36,8 +36,8 @@ func TestMain(m *testing.M) {
 
 	// Start S3 Ninja container
 	testResource, err = dockerPool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "scireum/s3-ninja",
-		Tag:        "latest",
+		Repository:   "scireum/s3-ninja",
+		Tag:          "latest",
 		ExposedPorts: []string{"9000/tcp"},
 	}, func(config *docker.HostConfig) {
 		config.AutoRemove = true
@@ -56,8 +56,12 @@ func TestMain(m *testing.M) {
 	dockerPool.MaxWait = 30 * time.Second
 
 	// Set credentials as environment variables
-	os.Setenv("AWS_ACCESS_KEY_ID", "AKIAIOSFODNN7EXAMPLE")
-	os.Setenv("AWS_SECRET_ACCESS_KEY", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
+	if err := os.Setenv("AWS_ACCESS_KEY_ID", "AKIAIOSFODNN7EXAMPLE"); err != nil {
+		log.Fatalf("can't set aws access key: %s", err)
+	}
+	if err := os.Setenv("AWS_SECRET_ACCESS_KEY", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"); err != nil {
+		log.Fatalf("can't set aws secret access key: %s", err)
+	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelError, // Only show errors during tests
