@@ -10,6 +10,6 @@ database:
 
 s3:
   region: eu-central-1
-  endpoint: http://localhost:9444
-  public-endpoint: http://localhost:9444
+  endpoint: http://localhost:9000
+  public-endpoint: http://localhost:9000
   bucket-name: medias-dev

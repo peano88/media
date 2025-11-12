@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -53,13 +52,30 @@ func NewMediaSaver(ctx context.Context, cfg Config, logger *slog.Logger) (*Media
 		return nil, fmt.Errorf("failed to ensure bucket exists: %w", err)
 	}
 
+	// Create a separate client for presigning with the public endpoint
+	publicEndpoint := cfg.PublicEndpoint
+	if publicEndpoint == "" {
+		publicEndpoint = cfg.Endpoint
+	}
+
+	presignClient := client
+	if publicEndpoint != cfg.Endpoint {
+		// Create a new client configured with public endpoint for presigning
+		presignClient = s3.NewFromConfig(awsConfig, func(o *s3.Options) {
+			if publicEndpoint != "" {
+				o.BaseEndpoint = aws.String(publicEndpoint)
+				o.UsePathStyle = true
+			}
+		})
+	}
+
 	return &MediaSaver{
 		client:         client,
-		presignClient:  s3.NewPresignClient(client),
+		presignClient:  s3.NewPresignClient(presignClient),
 		bucketName:     cfg.BucketName,
 		uploadExpiry:   time.Duration(cfg.UploadExpiry) * time.Second,
 		endpoint:       cfg.Endpoint,
-		publicEndpoint: cfg.PublicEndpoint,
+		publicEndpoint: publicEndpoint,
 	}, nil
 }
 
@@ -99,6 +115,7 @@ func (m *MediaSaver) GenerateUploadURL(ctx context.Context, media domain.Media) 
 		Bucket:         aws.String(m.bucketName),
 		Key:            aws.String(key),
 		ChecksumSHA256: aws.String(media.SHA256),
+		//ContentLength:  aws.Int64(media.Size),
 	}, func(opts *s3.PresignOptions) {
 		opts.Expires = m.uploadExpiry
 	})
@@ -111,12 +128,5 @@ func (m *MediaSaver) GenerateUploadURL(ctx context.Context, media domain.Media) 
 		)
 	}
 
-	url := request.URL
-
-	// Replace internal endpoint with public endpoint if they differ
-	if m.endpoint != "" && m.publicEndpoint != "" && m.endpoint != m.publicEndpoint {
-		url = strings.Replace(url, m.endpoint, m.publicEndpoint, 1)
-	}
-
-	return url, nil
+	return request.URL, nil
 }

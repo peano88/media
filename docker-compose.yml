@@ -20,15 +20,25 @@ services:
     networks:
       - medias-network
 
-  s3ninja:
-    image: scireum/s3-ninja:latest
-    container_name: medias-s3ninja
+  minio:
+    image: minio/minio:latest
+    container_name: medias-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
     ports:
-      - "9444:9000"
+      - "9000:9000"
+      - "9001:9001"
     volumes:
-      - s3ninja_data:/home/sirius/data
+      - minio_data:/data
     networks:
       - medias-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   migrate:
     image: gomicro/goose
@@ -55,10 +65,10 @@ services:
       CONFIG_PATH: /app/config
       DB_PASSWORD: ${DB_PASSWORD:-dev_password}
       DATABASE_HOST: postgres
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-AKIAIOSFODNN7EXAMPLE}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY}
-      S3_ENDPOINT: http://s3ninja:9000
-      S3_PUBLIC_ENDPOINT: http://localhost:9444
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_ENDPOINT: http://localhost:9000
     ports:
       - "8080:8080"
     depends_on:
@@ -66,8 +76,8 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-      s3ninja:
-        condition: service_started
+      minio:
+        condition: service_healthy
     networks:
       - medias-network
     volumes:
@@ -75,7 +85,7 @@ services:
 
 volumes:
   postgres_data:
-  s3ninja_data:
+  minio_data:
 
 networks:
   medias-network:

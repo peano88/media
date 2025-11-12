@@ -2,10 +2,9 @@ bin/
 .claude/settings.local.json
 food_for_thoughts.md
 main.go.bkp
-uploader
-service
 .env
 cmd/media_managment_service/media_managment_service
+cmd/uploader/uploader
 
 # Generated mocks
 **/mocks/

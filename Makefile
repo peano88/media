@@ -12,10 +12,11 @@ build: ## Build the service binary
 	@echo "Building service..."
 	@go build -o ./bin/media_managment_service ./cmd/media_managment_service
 
-build-all: ## Build all binaries
-	@echo "Building all binaries..."
-	@go build -o ./bin/media_managment_service ./cmd/media_managment_service
-	@go build -o ./bin/uploader ./tools/uploader/cmd
+build-uploader: ## Build the uploader tool
+	@echo "Building uploader..."
+	@go build -o ./bin/uploader ./cmd/uploader
+
+build-all: build build-uploader ## Build all binaries
 
 # Run targets
 run: ## Run the service locally

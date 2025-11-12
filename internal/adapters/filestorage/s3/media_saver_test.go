@@ -18,6 +18,7 @@ func TestMediaSaver_GenerateUploadURL(t *testing.T) {
 		ctx      context.Context
 		filename string
 		sha256   string
+		size     int64
 		validate func(*testing.T, string, error)
 	}{
 		{
@@ -25,6 +26,7 @@ func TestMediaSaver_GenerateUploadURL(t *testing.T) {
 			ctx:      ctx,
 			filename: "world-cup-goal.jpg",
 			sha256:   "w0rldcupg04l",
+			size:     2048000,
 			validate: func(t *testing.T, url string, err error) {
 				assert.NoError(t, err)
 				assert.NotEmpty(t, url)
@@ -43,6 +45,7 @@ func TestMediaSaver_GenerateUploadURL(t *testing.T) {
 			ctx:      ctx,
 			filename: "basketball dunk (final).mp4",
 			sha256:   "b4sk3tb4ll",
+			size:     15000000,
 			validate: func(t *testing.T, url string, err error) {
 				assert.NoError(t, err)
 				assert.NotEmpty(t, url)
@@ -69,6 +72,7 @@ func TestMediaSaver_GenerateUploadURL(t *testing.T) {
 			url, err := testMediaSaver.GenerateUploadURL(tt.ctx, domain.Media{
 				Filename: tt.filename,
 				SHA256:   tt.sha256,
+				Size:     tt.size,
 			})
 			tt.validate(t, url, err)
 		})
