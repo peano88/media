@@ -35,29 +35,24 @@ func New(mediaRepo MediaRepository, saver MediaSaver) *UseCase {
 
 // Execute creates a new media record with reserved status or returns existing one
 func (uc *UseCase) Execute(ctx context.Context, input domain.Media, tagNames []string) (domain.Media, error) {
-	// Validate input
 	if err := validateMedia(&input); err != nil {
 		return domain.Media{}, err
 	}
 
-	// Check if media already exists
 	existing, err := uc.mediaRepo.FindByFilenameAndSHA256(ctx, input.Filename, input.SHA256)
 	if err == nil {
 		// Media exists - handle based on status
-		return uc.handleExistingMedia(ctx, existing)
+		return uc.handleExistingMedia(ctx, existing, &input, tagNames)
 	}
 
-	// Check if error is NotFound (expected) or something else
 	if !domain.HasCode(err, domain.NotFoundCode) {
 		return domain.Media{}, domain.NewErrorFrom(err,
 			domain.WithDetails("error checking for existing media"),
 		)
 	}
 
-	// Set status for new media
 	input.Status = domain.MediaStatusReserved
 
-	// Generate upload URL for new media
 	url, err := uc.saver.GenerateUploadURL(ctx, input)
 	if err != nil {
 		return domain.Media{}, domain.NewErrorFrom(err,
@@ -65,7 +60,6 @@ func (uc *UseCase) Execute(ctx context.Context, input domain.Media, tagNames []s
 		)
 	}
 
-	// Create new media record
 	createdMedia, err := uc.mediaRepo.CreateMedia(ctx, input, tagNames)
 	if err != nil {
 		return domain.Media{}, domain.NewErrorFrom(err,
@@ -78,9 +72,17 @@ func (uc *UseCase) Execute(ctx context.Context, input domain.Media, tagNames []s
 	return createdMedia, nil
 }
 
-func (uc *UseCase) handleExistingMedia(ctx context.Context, existing domain.Media) (domain.Media, error) {
+func (uc *UseCase) handleExistingMedia(ctx context.Context, existing domain.Media, input *domain.Media, tagNames []string) (domain.Media, error) {
 	switch existing.Status {
 	case domain.MediaStatusReserved:
+		// Check if tags match
+		if !tagsMatch(existing.Tags, tagNames) {
+			return domain.Media{}, domain.NewError(domain.ConflictCode,
+				domain.WithMessage("media already exists with different tags"),
+				domain.WithDetails("a reserved media file with this filename and sha256 already exists but has different tags"),
+			)
+		}
+
 		// Regenerate URL for reserved media (in case previous one expired)
 		url, err := uc.saver.GenerateUploadURL(ctx, existing)
 		if err != nil {
@@ -182,4 +184,26 @@ func deriveMediaType(mimeType string) (domain.MediaType, error) {
 		domain.WithMessage("unsupported media type"),
 		domain.WithDetails(fmt.Sprintf("mimeType must be image/* or video/*, got: %s", mimeType)),
 	)
+}
+
+// tagsMatch checks if the existing tags match the provided tag names
+func tagsMatch(existingTags []domain.Tag, newTagNames []string) bool {
+	if len(existingTags) != len(newTagNames) {
+		return false
+	}
+
+	// Create a map of existing tag names for O(1) lookup
+	existingTagNames := make(map[string]bool, len(existingTags))
+	for _, tag := range existingTags {
+		existingTagNames[tag.Name] = true
+	}
+
+	// Check if all new tag names exist in existing tags
+	for _, tagName := range newTagNames {
+		if !existingTagNames[tagName] {
+			return false
+		}
+	}
+
+	return true
 }

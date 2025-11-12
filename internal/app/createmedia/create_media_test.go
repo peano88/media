@@ -128,6 +128,127 @@ func TestUseCase_Execute(t *testing.T) {
 			},
 		},
 		{
+			name: "success - update existing reserved media with same tags",
+			input: domain.Media{
+				Filename: "tennis-serve.mp4",
+				MimeType: "video/mp4",
+				Size:     8000000,
+				SHA256:   "t3nn1ss3rv3",
+			},
+			tagNames: []string{"tennis", "sports"},
+			setupMocks: func(repo *mocks.MockMediaRepository, saver *mocks.MockMediaSaver) {
+				// Media exists with reserved status and matching tags
+				existingMedia := domain.Media{
+					ID:       uuid.MustParse("88888888-8888-8888-8888-888888888888"),
+					Filename: "tennis-serve.mp4",
+					MimeType: "video/mp4",
+					Type:     domain.MediaTypeVideo,
+					Size:     8000000,
+					SHA256:   "t3nn1ss3rv3",
+					Status:   domain.MediaStatusReserved,
+					Tags: []domain.Tag{
+						{ID: uuid.MustParse("99999999-9999-9999-9999-999999999999"), Name: "tennis"},
+						{ID: uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"), Name: "sports"},
+					},
+					CreatedAt: time.Date(2024, 1, 1, 11, 0, 0, 0, time.UTC),
+					UpdatedAt: time.Date(2024, 1, 1, 11, 0, 0, 0, time.UTC),
+				}
+				repo.EXPECT().
+					FindByFilenameAndSHA256(ctx, "tennis-serve.mp4", "t3nn1ss3rv3").
+					Return(existingMedia, nil)
+
+				// Regenerate URL
+				saver.EXPECT().
+					GenerateUploadURL(ctx, existingMedia).
+					Return("http://localhost:8080/upload/t3nn1ss3rv3/tennis-serve.mp4", nil)
+			},
+			validate: func(t *testing.T, result domain.Media, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, domain.MediaOperationUpdate, result.Operation)
+				assert.Equal(t, "tennis-serve.mp4", result.Filename)
+				assert.Equal(t, domain.MediaStatusReserved, result.Status)
+				assert.Len(t, result.Tags, 2)
+			},
+		},
+		{
+			name: "conflict error - reserved media exists with different tags",
+			input: domain.Media{
+				Filename: "golf-putt.jpg",
+				MimeType: "image/jpeg",
+				Size:     2000000,
+				SHA256:   "g0lfputt",
+			},
+			tagNames: []string{"golf", "tournament"},
+			setupMocks: func(repo *mocks.MockMediaRepository, saver *mocks.MockMediaSaver) {
+				// Media exists with reserved status but different tags
+				existingMedia := domain.Media{
+					ID:       uuid.MustParse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+					Filename: "golf-putt.jpg",
+					MimeType: "image/jpeg",
+					Type:     domain.MediaTypeImage,
+					Size:     2000000,
+					SHA256:   "g0lfputt",
+					Status:   domain.MediaStatusReserved,
+					Tags: []domain.Tag{
+						{ID: uuid.MustParse("cccccccc-cccc-cccc-cccc-cccccccccccc"), Name: "golf"},
+						{ID: uuid.MustParse("dddddddd-dddd-dddd-dddd-dddddddddddd"), Name: "championship"},
+					},
+					CreatedAt: time.Date(2024, 1, 1, 13, 0, 0, 0, time.UTC),
+					UpdatedAt: time.Date(2024, 1, 1, 13, 0, 0, 0, time.UTC),
+				}
+				repo.EXPECT().
+					FindByFilenameAndSHA256(ctx, "golf-putt.jpg", "g0lfputt").
+					Return(existingMedia, nil)
+			},
+			validate: func(t *testing.T, result domain.Media, err error) {
+				assert.Error(t, err)
+				var domainErr *domain.Error
+				if assert.ErrorAs(t, err, &domainErr) {
+					assert.Equal(t, domain.ConflictCode, domainErr.Code)
+					assert.Contains(t, domainErr.Message, "media already exists with different tags")
+					assert.Contains(t, domainErr.Details, "reserved media file")
+				}
+			},
+		},
+		{
+			name: "conflict error - reserved media exists with fewer tags",
+			input: domain.Media{
+				Filename: "badminton-smash.jpg",
+				MimeType: "image/jpeg",
+				Size:     1500000,
+				SHA256:   "b4dm1nt0n",
+			},
+			tagNames: []string{"badminton", "sports", "championship"},
+			setupMocks: func(repo *mocks.MockMediaRepository, saver *mocks.MockMediaSaver) {
+				// Media exists with reserved status but fewer tags
+				existingMedia := domain.Media{
+					ID:       uuid.MustParse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
+					Filename: "badminton-smash.jpg",
+					MimeType: "image/jpeg",
+					Type:     domain.MediaTypeImage,
+					Size:     1500000,
+					SHA256:   "b4dm1nt0n",
+					Status:   domain.MediaStatusReserved,
+					Tags: []domain.Tag{
+						{ID: uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"), Name: "badminton"},
+					},
+					CreatedAt: time.Date(2024, 1, 1, 14, 0, 0, 0, time.UTC),
+					UpdatedAt: time.Date(2024, 1, 1, 14, 0, 0, 0, time.UTC),
+				}
+				repo.EXPECT().
+					FindByFilenameAndSHA256(ctx, "badminton-smash.jpg", "b4dm1nt0n").
+					Return(existingMedia, nil)
+			},
+			validate: func(t *testing.T, result domain.Media, err error) {
+				assert.Error(t, err)
+				var domainErr *domain.Error
+				if assert.ErrorAs(t, err, &domainErr) {
+					assert.Equal(t, domain.ConflictCode, domainErr.Code)
+					assert.Contains(t, domainErr.Message, "media already exists with different tags")
+				}
+			},
+		},
+		{
 			name: "validation error - empty filename",
 			input: domain.Media{
 				Filename: "",
