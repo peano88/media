@@ -137,6 +137,28 @@ func (m *MediaSaver) GenerateUploadURL(ctx context.Context, media domain.Media) 
 	return request.URL, nil
 }
 
+// GenerateDownloadURL generates a presigned URL for downloading a media file
+func (m *MediaSaver) GenerateDownloadURL(ctx context.Context, media domain.Media) (string, error) {
+	key := m.mediaKey(media)
+
+	request, err := m.presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(m.bucketName),
+		Key:    aws.String(key),
+	}, func(opts *s3.PresignOptions) {
+		opts.Expires = m.uploadExpiry // reuse same expiry duration
+	})
+
+	if err != nil {
+		return "", domain.NewError(
+			domain.InternalCode,
+			domain.WithMessage("failed to generate download URL"),
+			domain.WithDetails(err.Error()),
+		)
+	}
+
+	return request.URL, nil
+}
+
 // VerifyMediaExists checks if a media file exists in S3
 func (m *MediaSaver) VerifyMediaExists(ctx context.Context, media domain.Media) (bool, error) {
 	key := m.mediaKey(media)

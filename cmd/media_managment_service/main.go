@@ -15,6 +15,7 @@ import (
 	"github.com/peano88/medias/internal/app/createmedia"
 	"github.com/peano88/medias/internal/app/createtag"
 	"github.com/peano88/medias/internal/app/finalizemedia"
+	"github.com/peano88/medias/internal/app/getmedia"
 	"github.com/peano88/medias/internal/app/gettags"
 )
 
@@ -64,12 +65,14 @@ func main() {
 	getTagsUseCase := gettags.New(tagRepo)
 	createMediaUseCase := createmedia.New(mediaRepo, mediaSaver)
 	finalizeMediaUseCase := finalizemedia.New(mediaRepo, mediaSaver)
+	getMediaUseCase := getmedia.New(mediaRepo, mediaSaver)
 
 	deps := http.Dependencies{
 		TagCreator:      createTagUseCase,
 		TagRetriever:    getTagsUseCase,
 		MediaCreator:    createMediaUseCase,
 		MediaFinalizer:  finalizeMediaUseCase,
+		MediaRetriever:  getMediaUseCase,
 		Logger:          logger,
 		MetricForwarder: expvar.NewExpvarMetrics(),
 	}
