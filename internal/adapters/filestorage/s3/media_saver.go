@@ -2,6 +2,7 @@ package s3
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -107,9 +108,14 @@ func ensureBucketExists(ctx context.Context, client *s3.Client, bucketName, regi
 	return nil
 }
 
+// mediaKey generates the S3 key for a media file
+func (m *MediaSaver) mediaKey(media domain.Media) string {
+	return fmt.Sprintf("%s/%s", media.SHA256, media.Filename)
+}
+
 // GenerateUploadURL generates a presigned URL for uploading a media file
 func (m *MediaSaver) GenerateUploadURL(ctx context.Context, media domain.Media) (string, error) {
-	key := fmt.Sprintf("%s/%s", media.SHA256, media.Filename)
+	key := m.mediaKey(media)
 
 	request, err := m.presignClient.PresignPutObject(ctx, &s3.PutObjectInput{
 		Bucket:         aws.String(m.bucketName),
@@ -129,4 +135,31 @@ func (m *MediaSaver) GenerateUploadURL(ctx context.Context, media domain.Media) 
 	}
 
 	return request.URL, nil
+}
+
+// VerifyMediaExists checks if a media file exists in S3
+func (m *MediaSaver) VerifyMediaExists(ctx context.Context, media domain.Media) (bool, error) {
+	key := m.mediaKey(media)
+
+	_, err := m.client.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(m.bucketName),
+		Key:    aws.String(key),
+	})
+
+	if err != nil {
+		// Check if the error is because the object doesn't exist
+		var notFound *types.NotFound
+		var noSuchKey *types.NoSuchKey
+		if errors.As(err, &notFound) || errors.As(err, &noSuchKey) {
+			return false, nil
+		}
+		// Other errors (permissions, network, etc.) should be returned
+		return false, domain.NewError(
+			domain.InternalCode,
+			domain.WithMessage("failed to verify media existence"),
+			domain.WithDetails(err.Error()),
+		)
+	}
+
+	return true, nil
 }

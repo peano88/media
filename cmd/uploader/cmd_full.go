@@ -46,13 +46,15 @@ func fullCmd() *cobra.Command {
 			}
 
 			fmt.Printf("Creating media record for %s...\n", filepath.Base(filePath))
-			presignedURL, err := createMediaRecord(apiURL, reqBody)
+			createdMedia, err := createMediaRecord(apiURL, reqBody)
+			presignedURL := createdMedia.Data.URL
 			if err != nil {
 				return fmt.Errorf("error creating media record: %w", err)
 			}
 
 			fmt.Printf("Media record created successfully\n")
 			fmt.Printf("Presigned URL: %s\n", presignedURL)
+			fmt.Printf("Id of created media: %s\n", createdMedia.Data.ID)
 
 			// Reset file pointer for upload
 			if _, err := file.Seek(0, 0); err != nil {

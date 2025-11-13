@@ -20,6 +20,52 @@ func NewMediaRepository(pool *pgxpool.Pool) *MediaRepository {
 	return &MediaRepository{pool: pool}
 }
 
+// FindByID finds a media record by ID
+func (mr *MediaRepository) FindByID(ctx context.Context, id uuid.UUID) (domain.Media, error) {
+	query := `
+		SELECT id, filename, description, status, type, mime_type, size, sha256, created_at, updated_at
+		FROM media
+		WHERE id = $1
+	`
+
+	var media domain.Media
+	err := mr.pool.QueryRow(ctx, query, id).Scan(
+		&media.ID,
+		&media.Filename,
+		&media.Description,
+		&media.Status,
+		&media.Type,
+		&media.MimeType,
+		&media.Size,
+		&media.SHA256,
+		&media.CreatedAt,
+		&media.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return domain.Media{}, domain.NewError(domain.NotFoundCode,
+				domain.WithMessage("media not found"),
+				domain.WithTS(time.Now()),
+			)
+		}
+		return domain.Media{}, domain.NewError(domain.InternalCode,
+			domain.WithMessage("failed to find media"),
+			domain.WithDetails(err.Error()),
+			domain.WithTS(time.Now()),
+		)
+	}
+
+	// Load associated tags
+	tags, err := mr.loadMediaTags(ctx, media.ID)
+	if err != nil {
+		return domain.Media{}, err
+	}
+	media.Tags = tags
+
+	return media, nil
+}
+
 // FindByFilenameAndSHA256 finds a media record by filename and sha256
 func (mr *MediaRepository) FindByFilenameAndSHA256(ctx context.Context, filename, sha256 string) (domain.Media, error) {
 	query := `
@@ -137,6 +183,39 @@ func (mr *MediaRepository) CreateMedia(ctx context.Context, media domain.Media, 
 	}
 
 	return created, nil
+}
+
+// UpdateStatus updates the status of a media record using the provided media as blueprint
+func (mr *MediaRepository) UpdateStatus(ctx context.Context, media domain.Media, status domain.MediaStatus) (domain.Media, error) {
+	query := `
+		UPDATE media
+		SET status = $1, updated_at = NOW()
+		WHERE id = $2
+		RETURNING updated_at
+	`
+
+	var updatedAt time.Time
+	err := mr.pool.QueryRow(ctx, query, status, media.ID).Scan(&updatedAt)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return domain.Media{}, domain.NewError(domain.NotFoundCode,
+				domain.WithMessage("media not found"),
+				domain.WithTS(time.Now()),
+			)
+		}
+		return domain.Media{}, domain.NewError(domain.InternalCode,
+			domain.WithMessage("failed to update media status"),
+			domain.WithDetails(err.Error()),
+			domain.WithTS(time.Now()),
+		)
+	}
+
+	// Use the provided media as blueprint and update status and timestamp
+	media.Status = status
+	media.UpdatedAt = updatedAt
+
+	return media, nil
 }
 
 // loadMediaTags loads all tags associated with a media record

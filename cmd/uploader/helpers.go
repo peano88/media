@@ -67,21 +67,21 @@ func parseTags(tags string) []string {
 	return tagList
 }
 
-func createMediaRecord(apiURL string, req createMediaRequest) (string, error) {
+func createMediaRecord(apiURL string, req createMediaRequest) (createMediaResponse, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal request: %w", err)
+		return createMediaResponse{}, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewReader(body))
 	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
+		return createMediaResponse{}, fmt.Errorf("failed to create request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
-		return "", fmt.Errorf("request failed: %w", err)
+		return createMediaResponse{}, fmt.Errorf("request failed: %w", err)
 	}
 	defer func() {
 		_ = resp.Body.Close()
@@ -90,17 +90,17 @@ func createMediaRecord(apiURL string, req createMediaRequest) (string, error) {
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		var errResp errorResponse
 		if err := json.NewDecoder(resp.Body).Decode(&errResp); err == nil {
-			return "", fmt.Errorf("API error (%s): %s - %s", errResp.Error.Code, errResp.Error.Message, errResp.Error.Details)
+			return createMediaResponse{}, fmt.Errorf("API error (%s): %s - %s", errResp.Error.Code, errResp.Error.Message, errResp.Error.Details)
 		}
-		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return createMediaResponse{}, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	var mediaResp createMediaResponse
 	if err := json.NewDecoder(resp.Body).Decode(&mediaResp); err != nil {
-		return "", fmt.Errorf("failed to decode response: %w", err)
+		return createMediaResponse{}, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	return mediaResp.Data.URL, nil
+	return mediaResp, nil
 }
 
 func uploadToS3(presignedURL string, file *os.File) error {
@@ -117,7 +117,6 @@ func uploadToS3(presignedURL string, file *os.File) error {
 
 	// S3/MinIO requires Content-Length header
 	req.ContentLength = fileInfo.Size()
-	fmt.Printf("Uploading file (%d bytes)...\n", fileInfo.Size())
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

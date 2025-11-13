@@ -1,9 +1,12 @@
 package s3
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/peano88/medias/internal/domain"
 	"github.com/stretchr/testify/assert"
 )
@@ -75,6 +78,65 @@ func TestMediaSaver_GenerateUploadURL(t *testing.T) {
 				Size:     tt.size,
 			})
 			tt.validate(t, url, err)
+		})
+	}
+}
+
+func TestMediaSaver_VerifyMediaExists(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name     string
+		ctx      context.Context
+		media    domain.Media
+		setup    func(*testing.T, domain.Media)
+		validate func(*testing.T, bool, error)
+	}{
+		{
+			name: "success - file exists in storage",
+			ctx:  ctx,
+			media: domain.Media{
+				Filename: "existing-file.jpg",
+				SHA256:   "3x1st1ngf1l3",
+				Size:     1024000,
+			},
+			setup: func(t *testing.T, media domain.Media) {
+				// Upload a file directly to S3 container
+				_, err := testMediaSaver.client.PutObject(ctx, &s3.PutObjectInput{
+					Bucket: aws.String(testBucketName),
+					Key:    aws.String(testMediaSaver.mediaKey(media)),
+					Body:   bytes.NewReader([]byte("test content")),
+				})
+				assert.NoError(t, err)
+			},
+			validate: func(t *testing.T, exists bool, err error) {
+				assert.NoError(t, err)
+				assert.True(t, exists)
+			},
+		},
+		{
+			name: "success - file does not exist",
+			ctx:  ctx,
+			media: domain.Media{
+				Filename: "nonexistent-file.jpg",
+				SHA256:   "n0t3x1st",
+				Size:     1024000,
+			},
+			setup: func(t *testing.T, media domain.Media) {
+				// No setup - file should not exist
+			},
+			validate: func(t *testing.T, exists bool, err error) {
+				assert.NoError(t, err)
+				assert.False(t, exists)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setup(t, tt.media)
+			exists, err := testMediaSaver.VerifyMediaExists(tt.ctx, tt.media)
+			tt.validate(t, exists, err)
 		})
 	}
 }

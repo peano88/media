@@ -1,6 +1,10 @@
 package http
 
-import "time"
+import (
+	"time"
+
+	"github.com/peano88/medias/internal/domain"
+)
 
 type createTagRequest struct {
 	Name        string  `json:"name"`
@@ -55,6 +59,10 @@ type createMediaResponse struct {
 	Data mediaData `json:"data"`
 }
 
+type mediaResponse struct {
+	Data mediaData `json:"data"`
+}
+
 type mediaData struct {
 	ID          string    `json:"id"`
 	Filename    string    `json:"filename"`
@@ -67,4 +75,33 @@ type mediaData struct {
 	Tags        []tagData `json:"tags"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+func buildMediaResponse(media domain.Media) mediaResponse {
+	tagDataList := make([]tagData, len(media.Tags))
+	for i, tag := range media.Tags {
+		tagDataList[i] = tagData{
+			ID:          tag.ID.String(),
+			Name:        tag.Name,
+			Description: tag.Description,
+			CreatedAt:   tag.CreatedAt,
+			UpdatedAt:   tag.UpdatedAt,
+		}
+	}
+
+	return mediaResponse{
+		Data: mediaData{
+			ID:          media.ID.String(),
+			Filename:    media.Filename,
+			Description: media.Description,
+			Status:      string(media.Status),
+			URL:         media.URL,
+			Type:        string(media.Type),
+			MimeType:    media.MimeType,
+			Size:        media.Size,
+			Tags:        tagDataList,
+			CreatedAt:   media.CreatedAt,
+			UpdatedAt:   media.UpdatedAt,
+		},
+	}
 }

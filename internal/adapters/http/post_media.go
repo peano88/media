@@ -35,40 +35,13 @@ func HandlePostMedia(mc MediaCreator) func(http.ResponseWriter, *http.Request) {
 			return
 		}
 
-		// Convert domain tags to response format
-		tagDataList := make([]tagData, len(createdMedia.Tags))
-		for i, tag := range createdMedia.Tags {
-			tagDataList[i] = tagData{
-				ID:          tag.ID.String(),
-				Name:        tag.Name,
-				Description: tag.Description,
-				CreatedAt:   tag.CreatedAt,
-				UpdatedAt:   tag.UpdatedAt,
-			}
-		}
-
 		// Determine HTTP status code based on media real operation
 		statusCode := http.StatusCreated
 		if createdMedia.Operation == domain.MediaOperationUpdate {
 			statusCode = http.StatusOK
 		}
 
-		resp := createMediaResponse{
-			Data: mediaData{
-				ID:          createdMedia.ID.String(),
-				Filename:    createdMedia.Filename,
-				Description: createdMedia.Description,
-				Status:      string(createdMedia.Status),
-				URL:         createdMedia.URL,
-				Type:        string(createdMedia.Type),
-				MimeType:    createdMedia.MimeType,
-				Size:        createdMedia.Size,
-				Tags:        tagDataList,
-				CreatedAt:   createdMedia.CreatedAt,
-				UpdatedAt:   createdMedia.UpdatedAt,
-			},
-		}
-
+		resp := buildMediaResponse(createdMedia)
 		JSONOut(rw, statusCode, resp)
 	}
 }

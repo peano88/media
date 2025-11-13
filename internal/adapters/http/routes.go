@@ -15,6 +15,7 @@ type Dependencies struct {
 	TagCreator      TagCreator
 	TagRetriever    TagRetriever
 	MediaCreator    MediaCreator
+	MediaFinalizer  MediaFinalizer
 	Logger          *slog.Logger
 	MetricForwarder MetricsForwarder
 }
@@ -38,6 +39,7 @@ func NewRouter(deps Dependencies) chi.Router {
 	apiRouter.Post("/tags", HandlePostTags(deps.TagCreator))
 	apiRouter.Get("/tags", HandleGetTags(deps.TagRetriever))
 	apiRouter.Post("/media", HandlePostMedia(deps.MediaCreator))
+	apiRouter.Post("/media/{id}/finalize", HandlePostFinalizeMedia(deps.MediaFinalizer))
 
 	r.Mount(BasePath, apiRouter)
 	return r

@@ -48,13 +48,14 @@ func mediaCmd() *cobra.Command {
 			}
 
 			fmt.Printf("Creating media record for %s...\n", filepath.Base(filePath))
-			presignedURL, err := createMediaRecord(apiURL, reqBody)
+			createdMedia, err := createMediaRecord(apiURL, reqBody)
 			if err != nil {
 				return fmt.Errorf("error creating media record: %w", err)
 			}
 
 			fmt.Printf("Media record created successfully\n")
-			fmt.Printf("Presigned URL: %s\n", presignedURL)
+			fmt.Printf("Presigned URL: %s\n", createdMedia.Data.URL)
+			fmt.Printf("id of the created media record: %s\n", createdMedia.Data.ID)
 			return nil
 		},
 	}
